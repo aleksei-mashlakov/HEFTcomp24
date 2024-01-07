@@ -17,3 +17,14 @@ repos:
     hooks:
       - id: interrogate
         args: [src, -v, -i, --fail-under=80]
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.1.11
+  hooks:
+    # Run the linter.
+    - id: ruff
+      types_or: [ python, pyi, jupyter ]
+      args: [ --fix ]
+    # Run the formatter.
+    - id: ruff-format
+      types_or: [ python, pyi, jupyter ]

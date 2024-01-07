@@ -25,7 +25,7 @@ A [flow](https://docs.prefect.io/concepts/flows/) is the basis of all Prefect wo
 
 To view your flow runs from a UI, sign in to your [Prefect Cloud](https://app.prefect.cloud/) account or spin up a Prefect Orion server on your local machine:
 ```bash
-prefect orion start
+prefect server start
 ```
 Open the URL http://127.0.0.1:4200/, and you should see the Prefect UI:
 
