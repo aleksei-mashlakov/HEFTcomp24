@@ -2,8 +2,8 @@ import pandas as pd
 from prefect import flow
 from statsmodels.iolib.smpickle import load_pickle
 
-import src.comp_utils as utils
-from src.rebase import RebaseAPI
+import src.utils as utils
+from src.apis.rebase import RebaseAPI
 
 
 @flow(log_prints=True)

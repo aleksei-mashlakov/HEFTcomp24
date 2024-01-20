@@ -12,24 +12,26 @@ class RebaseAPI:
         self.session = requests.Session()
         self.session.headers = self.headers
 
-    def get_variable(
-        self,
-        day: str,
-        variable: list[str] = [
+    def get_variable(self, day: str, variable: str) -> pd.DataFrame | None:
+        if variable not in [
             "market_index",
             "day_ahead_price",
             "imbalance_price",
             "wind_total_production",
             "solar_total_production",
             "solar_and_wind_forecast",
-        ],
-    ):
+        ]:
+            raise Exception(f"No such variable {variable} in API!")
         url = f"{self.base_url}/challenges/data/{variable}"
         params = {"day": day}
         resp = self.session.get(url, params=params)
-
+        if resp.status_code != 200:
+            return
         data = resp.json()
         df = pd.DataFrame(data)
+        if df.empty:
+            print(f"No data for {day}")
+            return
         return df
 
     # Solar and wind forecast
