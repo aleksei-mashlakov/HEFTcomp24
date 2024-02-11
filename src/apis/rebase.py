@@ -1,3 +1,5 @@
+import datetime
+
 import pandas as pd
 import requests
 
@@ -12,6 +14,24 @@ class RebaseAPI:
         self.session = requests.Session()
         self.session.headers = self.headers
 
+    def get_submission(self, day: str) -> pd.DataFrame | None:
+        url = "https://api.rebase.energy/challenges/heftcom2024/submissions"
+        resp = self.session.get(url, params={"market_day": day})
+        if resp.status_code != 200:
+            print(f"Response status code for variable data is {resp.status_code}")
+            return None
+        data = resp.json()
+        if not data["items"]:
+            print(f"No items for {day}")
+            return None
+        submission = data["items"][-1]["solution"]["submission"]
+        df = pd.json_normalize(submission)
+        df.columns = df.columns.to_series().replace(
+            {"^probabilistic_forecast.": "q", "^timestamp*": "valid_datetime"},
+            regex=True,
+        )
+        return df
+
     def get_variable(self, day: str, variable: str) -> pd.DataFrame | None:
         if variable not in [
             "market_index",
@@ -23,9 +43,9 @@ class RebaseAPI:
         ]:
             raise Exception(f"No such variable {variable} in API!")
         url = f"{self.base_url}/challenges/data/{variable}"
-        params = {"day": day}
-        resp = self.session.get(url, params=params)
+        resp = self.session.get(url, params={"day": day})
         if resp.status_code != 200:
+            print(f"Response status code for variable data is {resp.status_code}")
             return
         data = resp.json()
         df = pd.DataFrame(data)
@@ -57,7 +77,14 @@ class RebaseAPI:
         print(resp)
         return resp.json()
 
-    def query_weather_latest(self, model, lats, lons, variables, query_type):
+    def query_weather_latest(
+        self,
+        model,
+        lats: list[float],
+        lons: list[float],
+        variables: str,
+        query_type,
+    ):
         url = f"{self.base_url}/weather/v2/query"
 
         body = {
@@ -71,17 +98,18 @@ class RebaseAPI:
         }
 
         resp = requests.post(url, json=body, headers={"Authorization": self.api_key})
-        print(resp.status_code)
-
+        print(f"Response status code for weather data is {resp.status_code}")
         return resp.json()
 
-    def query_weather_latest_points(self, model, lats, lons, variables) -> pd.DataFrame:
+    def query_weather_latest_points(
+        self, model, lats: list[float], lons: list[float], variables: str
+    ) -> pd.DataFrame:
         # Data here is returned a list
         data = self.query_weather_latest(model, lats, lons, variables, "points")
 
         df = pd.DataFrame()
         for point in range(len(data)):
-            new_df = pd.DataFrame(data[0])
+            new_df = pd.DataFrame(data[point])
             new_df["point"] = point
             new_df["latitude"] = lats[point]
             new_df["longitude"] = lons[point]
@@ -93,7 +121,6 @@ class RebaseAPI:
         # Data here is returned as a flattened
         data = self.query_weather_latest(model, lats, lons, variables, "grid")
         df = pd.DataFrame(data)
-
         return df
 
     # To query Hornsea project 1 DWD_ICON-EU grid
@@ -177,7 +204,14 @@ class RebaseAPI:
 
         resp = self.session.post(url, headers=self.headers, json=data)
 
-        print(resp)
+        print(f"Received response {resp}")
+
+        match resp.status_code:
+            case 200:
+                print("The submission was successful")
+            case _:
+                print("The submission failed")
+
         print(resp.text)
 
         # Write log file
@@ -186,3 +220,24 @@ class RebaseAPI:
         )
         text_file.write(resp.text)
         text_file.close()
+
+    def fetch_submission_data(
+        self,
+        start: datetime.datetime = datetime.datetime(
+            2024, 2, 1, tzinfo=datetime.timezone.utc
+        ),
+        end: datetime.datetime = pd.to_datetime("today", utc=True),
+    ) -> pd.DataFrame:
+        market_days = pd.date_range(
+            start=start,
+            end=end + pd.Timedelta(1, unit="day"),
+            freq=pd.Timedelta(1, unit="day"),
+        )
+        batch_submission_data: list[pd.DataFrame] = [
+            self.get_submission(day=day.strftime("%Y-%m-%d")) for day in market_days
+        ]  # type: ignore
+
+        submission_data = pd.concat(batch_submission_data, axis=0).reset_index(
+            drop=True
+        )
+        return submission_data

@@ -2,10 +2,10 @@ import datetime
 import warnings
 
 import pandas as pd
-
+import xarray as xr
 
 # Convert nwp data frame to xarray
-def weather_df_to_xr(weather_data):
+def weather_df_to_xr(weather_data) -> xr.Dataset:
     weather_data["ref_datetime"] = pd.to_datetime(
         weather_data["ref_datetime"], utc=True
     )
@@ -108,3 +108,11 @@ def prep_submission_in_json_format(
     data = {"market_day": market_day.strftime("%Y-%m-%d"), "submission": submission}
 
     return data
+
+
+def preprocess_with_coord_averaging(
+    dataset: xr.Dataset,
+    features: list[str],
+    dims: str | list[str] = ["latitude", "longitude"],
+) -> pd.DataFrame:
+    return dataset[features].mean(dim=dims).to_dataframe().reset_index()

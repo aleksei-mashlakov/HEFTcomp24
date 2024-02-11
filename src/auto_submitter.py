@@ -11,7 +11,8 @@ def main() -> None:
     rebase_api = RebaseAPI()
 
     # Get latest weather forecasts
-    latest_dwd_Hornsea1 = utils.weather_df_to_xr(rebase_api.get_hornsea_dwd())
+    hornsea1_weather_data = rebase_api.get_hornsea_dwd()
+    latest_dwd_Hornsea1 = utils.weather_df_to_xr(hornsea1_weather_data)
     latest_dwd_Hornsea1_features = (
         latest_dwd_Hornsea1["WindSpeed:100"]
         .mean(dim=["latitude", "longitude"])
@@ -19,7 +20,8 @@ def main() -> None:
         .reset_index()
     )
 
-    latest_dwd_solar = utils.weather_df_to_xr(rebase_api.get_pes10_nwp("DWD_ICON-EU"))
+    solar_weather_data = rebase_api.get_pes10_nwp("DWD_ICON-EU")
+    latest_dwd_solar = utils.weather_df_to_xr(solar_weather_data)
     latest_dwd_solar_features = (
         latest_dwd_solar["SolarDownwardRadiation"]
         .mean(dim="point")
@@ -32,7 +34,7 @@ def main() -> None:
     )
     latest_forecast_table = (
         latest_forecast_table.set_index("valid_datetime")
-        .resample("30T")
+        .resample("30min")
         .interpolate("linear", limit=5)
         .reset_index()
     )
