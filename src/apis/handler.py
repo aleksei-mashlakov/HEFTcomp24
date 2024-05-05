@@ -31,3 +31,16 @@ class BaselineApiHandler(BaseApiHandler):
 
     def submit(self, data: dict[str, Any]) -> None:
         self.comp_api.submit(data)
+
+
+@dataclasses.dataclass
+class MultivariateApiHandler(BaseApiHandler):
+    comp_api: RebaseAPI = RebaseAPI()
+
+    def collect(self) -> InputData:
+        wind_data = self.comp_api.get_hornsea_gfs()
+        solar_data = self.comp_api.get_pes10_nwp("DWD_ICON-EU")
+        return InputData(wind_data=wind_data, solar_data=solar_data)
+
+    def submit(self, data: dict[str, Any]) -> None:
+        self.comp_api.submit(data)

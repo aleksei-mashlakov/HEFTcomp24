@@ -101,9 +101,7 @@ class RebaseAPI:
         print(f"Response status code for weather data is {resp.status_code}")
         return resp.json()
 
-    def query_weather_latest_points(
-        self, model, lats: list[float], lons: list[float], variables: str
-    ) -> pd.DataFrame:
+    def query_weather_latest_points(self, model, lats: list[float], lons: list[float], variables: str) -> pd.DataFrame:
         # Data here is returned a list
         data = self.query_weather_latest(model, lats, lons, variables, "points")
 
@@ -215,17 +213,13 @@ class RebaseAPI:
         print(resp.text)
 
         # Write log file
-        text_file = open(
-            f"logs/sub_{pd.Timestamp('today').strftime('%Y%m%d-%H%M%S')}.txt", "w"
-        )
+        text_file = open(f"logs/sub_{pd.Timestamp('today').strftime('%Y%m%d-%H%M%S')}.txt", "w")
         text_file.write(resp.text)
         text_file.close()
 
     def fetch_submission_data(
         self,
-        start: datetime.datetime = datetime.datetime(
-            2024, 2, 1, tzinfo=datetime.timezone.utc
-        ),
+        start: datetime.datetime = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc),
         end: datetime.datetime = pd.to_datetime("today", utc=True),
     ) -> pd.DataFrame:
         market_days = pd.date_range(
@@ -237,7 +231,5 @@ class RebaseAPI:
             self.get_submission(day=day.strftime("%Y-%m-%d")) for day in market_days
         ]  # type: ignore
 
-        submission_data = pd.concat(batch_submission_data, axis=0).reset_index(
-            drop=True
-        )
+        submission_data = pd.concat(batch_submission_data, axis=0).reset_index(drop=True)
         return submission_data

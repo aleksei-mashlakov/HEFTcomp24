@@ -10,7 +10,5 @@ class HeftForecastScorer:
     def pinball_score(cls, df: pd.DataFrame):
         score = list()
         for qu in range(10, 100, 10):
-            score.append(
-                cls.pinball(y=df["target"], q=df[f"q{qu}"], alpha=qu / 100).mean()
-            )
+            score.append(cls.pinball(y=df["target"], q=df[f"q{qu}"], alpha=qu / 100).mean())
         return sum(score) / len(score)

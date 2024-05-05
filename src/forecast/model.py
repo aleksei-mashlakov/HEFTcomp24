@@ -11,11 +11,12 @@ import pandas as pd
 from gluonts.dataset.pandas import PandasDataset
 from gluonts.dataset.split import split
 from gluonts.model.predictor import Predictor
+from mlforecast import MLForecast
 from sklearn.preprocessing import MinMaxScaler
 from statsmodels.iolib.smpickle import load_pickle
 
 import src.utils as utils
-from src.forecast.gluonts_new import quantify
+from src.forecast.gluonts import quantify
 
 
 def reindex_dataset(dataset: pd.DataFrame) -> pd.DataFrame:
@@ -40,6 +41,66 @@ ForecastInputT = TypeVar("ForecastInputT", pd.DataFrame, pd.Series)
 class ForecastModel(Generic[ForecastInputT]):
     def predict(self, ForecastInputT) -> ForecastInputT:
         raise NotImplementedError
+
+
+@dataclasses.dataclass
+class LightGBMForecaster(BaseForecaster):
+    def load_model(self, model_path: Path):
+        return MLForecast.load(path=model_path)
+
+    def load_scalers(self, model_path: Path) -> tuple[MinMaxScaler, MinMaxScaler]:
+        with open(model_path / "target_scaler.pickle", "rb") as handle:
+            target_scaler = pickle.load(handle)
+
+        with open(model_path / "input_scaler.pickle", "rb") as handle:
+            input_scaler = pickle.load(handle)
+        return input_scaler, target_scaler
+
+    def predict(self, features: pd.DataFrame) -> pd.DataFrame:
+        # Produce quantile forecasts
+        model_name = "lgb3"
+        model_path = Path(f"./models/{model_name}")
+        horizon = 48
+        target = "total_generation_MWh"
+        input_scaler, target_scaler = self.load_scalers(model_path)
+        predictor = self.load_model(Path("./models/lgb2/"))
+
+        transformed_data = features.drop("ref_datetime", axis=1).set_index(
+            "valid_datetime"
+        )
+        transformed_data = transformed_data[
+            : transformed_data.index.max().replace(hour=22, minute=30, second=0)
+        ]
+        transformed_data[transformed_data < 0] = 0.0
+        scaled_dataset = pd.DataFrame(
+            data=input_scaler.transform(transformed_data.reset_index(drop=True)),
+            index=transformed_data.index,
+            columns=transformed_data.columns,
+        )
+        market_time = utils.day_ahead_market_times().tz_convert("UTC")
+        scaled_dataset[scaled_dataset < 0] = 0.0
+        scaled_dataset = scaled_dataset[scaled_dataset.index <= market_time.max()]
+        scaled_dataset.index = scaled_dataset.index.tz_localize(None)
+        scaled_dataset.reset_index(names="ds", inplace=True)
+
+        scaled_dataset["unique_id"] = target
+
+        old_index = scaled_dataset.ds.copy()
+        scaled_dataset.ds = predictor.make_future_dataframe(horizon).ds
+
+        quantile_forecasts = predictor.predict(horizon, X_df=scaled_dataset)
+        quantile_forecasts.set_index("ds", inplace=True)
+        quantile_forecasts = quantile_forecasts.drop("unique_id", axis=1)
+        for column in quantile_forecasts.columns:
+            quantile_forecasts.loc[:, column] = target_scaler.inverse_transform(
+                quantile_forecasts[[column]].values
+            )
+        quantile_forecasts.index = old_index
+        quantile_forecasts.reset_index(names="valid_datetime", inplace=True)
+        quantile_forecasts.valid_datetime = pd.to_datetime(
+            quantile_forecasts.valid_datetime, utc=True
+        )
+        return quantile_forecasts
 
 
 @dataclasses.dataclass
@@ -186,7 +247,7 @@ class GluonTsSplitForecaster(GluonTSForecaster):
             "valid_data",
         ]
         solar_forecast = self._predict(model_name, features, dyn_features, 900)
-        print(solar_forecast)
+        # print(solar_forecast)
         dyn_features = [
             "WindSpeed:100",
             "WindDirection:100",
@@ -199,9 +260,9 @@ class GluonTsSplitForecaster(GluonTSForecaster):
         model_name = "WindDeepARwithMixture"
         # wind_forecast = self._predict(model_name, features, dyn_features, 150)
         wind_forecast = solar_forecast.copy()
-        print(wind_forecast)
-        wind_forecast.loc[:, :] = 150
-        print(wind_forecast)
+        # print(wind_forecast)
+        wind_forecast.loc[:, :] = 425 / 2
+        # print(wind_forecast)
         quantile_forecasts = solar_forecast + wind_forecast
         quantile_forecasts.reset_index(names="valid_datetime", inplace=True)
         return quantile_forecasts
@@ -288,6 +349,6 @@ class GluonTsSplitForecaster(GluonTSForecaster):
             quantile_forecasts.loc[:, column] = target_scaler.inverse_transform(
                 quantile_forecasts[[column]].values
             )
-        quantile_forecasts = quantile_forecasts.clip(upper=upper_clip, lower=0)
+        # quantile_forecasts = quantile_forecasts.clip(upper=upper_clip, lower=0)
         # quantile_forecasts.reset_index(names="valid_datetime", inplace=True)
         return quantile_forecasts
