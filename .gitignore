@@ -94,4 +94,7 @@ target/
 data/*/*
 models/*
 !.gitkeep
-*.txt
+
+lightning_logs/*
+notebooks/*
+.gluonts/
