@@ -1,7 +1,12 @@
 import datetime
+import logging
 
 import pandas as pd
 import requests
+
+from src.data.abc import WeatherModel
+
+logger = logging.getLogger(__file__)
 
 
 class RebaseAPI:
@@ -18,11 +23,11 @@ class RebaseAPI:
         url = "https://api.rebase.energy/challenges/heftcom2024/submissions"
         resp = self.session.get(url, params={"market_day": day})
         if resp.status_code != 200:
-            print(f"Response status code for variable data is {resp.status_code}")
+            logger.info(f"Response status code for variable data is {resp.status_code}")
             return None
         data = resp.json()
         if not data["items"]:
-            print(f"No items for {day}")
+            logger.info(f"No items for {day}")
             return None
         submission = data["items"][-1]["solution"]["submission"]
         df = pd.json_normalize(submission)
@@ -45,12 +50,12 @@ class RebaseAPI:
         url = f"{self.base_url}/challenges/data/{variable}"
         resp = self.session.get(url, params={"day": day})
         if resp.status_code != 200:
-            print(f"Response status code for variable data is {resp.status_code}")
+            logger.info(f"Response status code for variable data is {resp.status_code}")
             return
         data = resp.json()
         df = pd.DataFrame(data)
         if df.empty:
-            print(f"No data for {day}")
+            logger.info(f"No data for {day}")
             return
         return df
 
@@ -67,14 +72,14 @@ class RebaseAPI:
     def get_day_ahead_demand_forecast(self):
         url = f"{self.base_url}/challenges/data/day_ahead_demand"
         resp = self.session.get(url)
-        print(resp)
+        logger.info(f"Day-ahead demand forecast {resp = }")
         return resp.json()
 
     # Margin forecast
     def get_margin_forecast(self):
         url = f"{self.base_url}/challenges/data/margin_forecast"
         resp = self.session.get(url)
-        print(resp)
+        logger.info(f"Margin forecast {resp = }")
         return resp.json()
 
     def query_weather_latest(
@@ -98,7 +103,7 @@ class RebaseAPI:
         }
 
         resp = requests.post(url, json=body, headers={"Authorization": self.api_key})
-        print(f"Response status code for weather data is {resp.status_code}")
+        logger.info(f"Response status code for weather data is {resp.status_code}")
         return resp.json()
 
     def query_weather_latest_points(self, model, lats: list[float], lons: list[float], variables: str) -> pd.DataFrame:
@@ -128,7 +133,7 @@ class RebaseAPI:
         lons = [1.702, 1.767, 1.832, 1.897, 1.962, 2.027]
 
         variables = "WindSpeed, WindSpeed:100, WindDirection, WindDirection:100, Temperature, RelativeHumidity"
-        return self.query_weather_latest_grid("DWD_ICON-EU", lats, lons, variables)
+        return self.query_weather_latest_grid(WeatherModel.DWD_ICON_EU.value, lats, lons, variables)
 
     # To query Hornsea project 1 GFS grid
     def get_hornsea_gfs(self) -> pd.DataFrame:
@@ -137,7 +142,7 @@ class RebaseAPI:
         lons = [1.522, 1.772, 2.022]
 
         variables = "WindSpeed, WindSpeed:100, WindDirection, WindDirection:100, Temperature, RelativeHumidity"
-        return self.query_weather_latest_grid("NCEP_GFS", lats, lons, variables)
+        return self.query_weather_latest_grid(WeatherModel.NCEP_GFS.value, lats, lons, variables)
 
     def get_pes10_nwp(self, model):
         # As a list of points
@@ -202,15 +207,15 @@ class RebaseAPI:
 
         resp = self.session.post(url, headers=self.headers, json=data)
 
-        print(f"Received response {resp}")
+        logger.debug(f"Received response {resp}")
 
         match resp.status_code:
             case 200:
-                print("The submission was successful")
+                logger.info("The submission was successful")
             case _:
-                print("The submission failed")
+                logger.warning("The submission failed")
 
-        print(resp.text)
+        logger.debug(resp.text)
 
         # Write log file
         text_file = open(f"logs/sub_{pd.Timestamp('today').strftime('%Y%m%d-%H%M%S')}.txt", "w")

@@ -1,49 +1,37 @@
-initialize_git:
-	@echo "Initializing git..."
-	git init 
-	
-install: 
-	@echo "Installing..."
-	poetry install
-	poetry run pre-commit install
+.PHONY: clean virtualenv lint help
+ 
+#################################################################################
+# GLOBALS                                                                       #
+#################################################################################
 
-activate:
-	@echo "Activating virtual environment"
-	poetry shell
+PYTHON_INTERPRETER = python3
+VENV = .venv
 
-download_data:
-	@echo "Downloading data..."
-	wget https://gist.githubusercontent.com/khuyentran1401/a1abde0a7d27d31c7dd08f34a2c29d8f/raw/da2b0f2c9743e102b9dfa6cd75e94708d01640c9/Iris.csv -O data/raw/iris.csv
+#################################################################################
+# COMMANDS                                                                      #
+#################################################################################
 
-setup: initialize_git install download_data
+virtualenv: ## Create virtualenv
+	rm -rf .venv
+	$(PYTHON_INTERPRETER) -m venv $(VENV)
+	$(VENV)/bin/pip install --upgrade pip
+	$(VENV)/bin/pip install -r requirements.txt
+	$(info "Activate with the command 'source .venv/bin/activate'")
 
-test:
-	pytest
+add-kernel: ## Add jupyter kernel
+	$(PYTHON_INTERPRETER) -m pip install ipykernel
+	$(PYTHON_INTERPRETER) -m ipykernel install --user --name=$(NAME)
 
-docs_view:
-	@echo View API documentation... 
-	PYTHONPATH=src pdoc src --http localhost:8080
 
-docs_save:
-	@echo Save documentation to docs... 
-	PYTHONPATH=src pdoc src -o docs
-
-data/processed/xy.pkl: data/raw src/process.py
-	@echo "Processing data..."
-	python src/process.py
-
-models/svc.pkl: data/processed/xy.pkl src/train_model.py
-	@echo "Training model..."
-	python src/train_model.py
-
-notebooks/results.ipynb: models/svc.pkl src/run_notebook.py
-	@echo "Running notebook..."
-	python src/run_notebook.py
-
-pipeline: data/processed/xy.pkl models/svc.pkl notebooks/results.ipynb
-
-## Delete all compiled Python files
-clean:
+clean: ## Delete all compiled Python files
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
-	rm -rf .pytest_cache
+
+pre-commit-install: ## To use the pre-commit hooks
+	pre-commit install
+
+lint: ## Lint using ruff
+	ruff src/
+
+help:
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'

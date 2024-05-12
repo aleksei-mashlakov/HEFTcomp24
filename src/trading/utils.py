@@ -20,6 +20,4 @@ def revenue(
     Returns:
         _type_: _description_
     """
-    return bid * day_ahead_price + (y - bid) * (
-        single_system_price - imbalance_impact * (y - bid)
-    )
+    return bid * day_ahead_price + (y - bid) * (single_system_price - imbalance_impact * (y - bid))
