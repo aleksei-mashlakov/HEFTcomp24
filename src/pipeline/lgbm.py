@@ -29,7 +29,7 @@ class LGBPipeline(
         trader_input = TradeInput(production_forecast=production_forecast)
         bid = self.trader.compute_volume(trader_input)
         # Transform results
-        print(production_forecast)
+        # print(production_forecast)
         submission_data = self.data_processor.submit_transform(forecast=production_forecast, market_bid=bid)
         # Make submission
         self.api_handler.submit(submission_data)

@@ -238,3 +238,22 @@ class RebaseAPI:
 
         submission_data = pd.concat(batch_submission_data, axis=0).reset_index(drop=True)
         return submission_data
+
+
+def fetch_batch_data(
+    variable: str,
+    start: datetime.datetime,
+    end: datetime.datetime = pd.to_datetime("today", utc=True),
+) -> pd.DataFrame:
+    missing_days = pd.date_range(
+        start=start,
+        end=end + pd.Timedelta(1, unit="day"),
+        freq=pd.Timedelta(1, unit="day"),
+    )
+    rebase_api = RebaseAPI()
+    batch_data: list[pd.DataFrame] = [
+        rebase_api.get_variable(day=day.strftime("%Y-%m-%d"), variable=variable) for day in missing_days
+    ]  # type: ignore
+
+    data = pd.concat(batch_data, axis=0).reset_index(drop=True)
+    return data

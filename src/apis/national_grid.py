@@ -20,11 +20,12 @@ class SqlFetcher:
     def query_data(cls, base_url: str, query: str) -> dict[str, list[Any]]:
         try:
             response = requests.get(base_url, params=parse.urlencode({"sql": query}))
+            logger.info(f"{response = }")
             data = response.json()["result"]
-            logger.info(f"Data: {data}")  # Printing data
         except requests.exceptions.RequestException as e:
             logger.warning(f"{e.response.text}")
             data = {"records": []}
+        logger.info(f"Data: {data}")  # Printing data
         return data
 
 
@@ -41,6 +42,7 @@ class NationalGridAPI:
             SELECT * FROM  '{ATTRIBUTE_MAP['carbon_intensity']}' 
             WHERE datetime >= '{start_date}' AND datetime < '{end_date}'
         """
+        print(gb_carbon_intensity_forecast)
         return SqlFetcher.query_data(cls.base_url, gb_carbon_intensity_forecast)
 
 

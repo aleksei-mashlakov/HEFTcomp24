@@ -6,7 +6,6 @@ import pandas as pd
 from mlforecast import MLForecast
 from sklearn.preprocessing import MinMaxScaler
 
-import src.utils as utils
 from src.forecast.abc import BaseForecaster
 
 
@@ -57,6 +56,6 @@ class LightGBMForecaster(BaseForecaster):
         quantile_forecasts.index = old_index[: self.horizon]
         quantile_forecasts.reset_index(names="valid_datetime", inplace=True)
         quantile_forecasts.valid_datetime = pd.to_datetime(quantile_forecasts.valid_datetime, utc=True)
-        market_time = utils.day_ahead_market_times().tz_convert("UTC")
+        # market_time = utils.day_ahead_market_times().tz_convert("UTC")
         # quantile_forecasts = quantile_forecasts[quantile_forecasts.index <= market_time.max()]
         return quantile_forecasts

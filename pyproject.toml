@@ -1,38 +1,3 @@
-[tool.poetry]
-name = "HEFTcomp"
-version = "0.1.0"
-description = "A project for `Hybrid Energy Forecasting and Trading Competition` competition"
-authors = ["Aleksei Mashlakov"]
-
-[tool.poetry.dependencies]
-python = "^3.11"
-pdoc3 = "*"
-notebook = "*"
-prefect = "*"
-scikit-learn = "*"
-pandas = "*"
-prefect-jupyter = "*"
-interrogate = "*"
-joblib = "*"
-dask = "*"
-netCDF4 = "*"
-bottleneck = "*"
-xarray = "*"
-statsmodels = "*"
-matplotlib = "*"
-requests = "*"
-seaborn = "*"
-polars = "*"
-hvplot = "*"
-
-[tool.poetry.dev-dependencies]
-pytest = "^6.2.5"
-pre-commit = "^2.19.0"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.black]
 line-length = 120
 include = '\.pyi?$'
@@ -48,3 +13,19 @@ exclude = '''
 | build   
 )/ 
 '''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+
+[tool.ruff]
+line-length = 120
+
+[tool.mypy]
+ignore_missing_imports = true
+no_site_packages = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+strict_optional = false
